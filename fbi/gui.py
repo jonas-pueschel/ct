@@ -9,6 +9,8 @@ import fbi
 from PIL import Image
 import tkinter as tk, tkinter.filedialog
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 
 class GUI(tk.Tk):
     def __init__(self, master = None):
@@ -56,45 +58,38 @@ class GUI(tk.Tk):
             p = int(self.input_p.get())
         except Exception:
             p = int(np.pi * q)
-        self.start_button["state"] = "disabled"
+        self.destroy()
+        
         
         f_fbi, rf_a = fbi.filteredBackprojection(f_in, p, q)
+        self.show_results(f_in, rf_a, f_fbi, p, q)
         
-        def picturized(ndarr, shift0 = 0, shift1 = 0):
-            ret = np.zeros(ndarr.shape, np.uint8)
-            for j in range(ndarr.shape[0]):
-                js = j - shift0
-                for k in range(ndarr.shape[1]):
-                    ks = k - shift1
-                    if(ndarr[js,ks] < 0):
-                        ret[j,k] = 0
-                    elif(ndarr[js,ks] > 255):
-                        ret[j,k] = 255
-                    else:
-                        ret[j,k] = int(ndarr[js,ks])
-            return ret
         
-        im_rf = Image.fromarray(picturized(np.rot90(rf_a), shift0 = q))
-        im_fbi = Image.fromarray(picturized(f_fbi))
-        im_err = Image.fromarray(picturized(np.abs(f_in - f_fbi)))
-        if(self.save):
-            try:
-                im.save(self.file_in[0:-4] + "_bw.png")
-                im_rf.save(self.file_in[0:-4] + "_rf.png")
-                im_fbi.save(self.file_in[0:-4] + "_fbi.png")
-                im_err.save(self.file_in[0:-4] + "_err.png")
-            except Exception as e:
-                print(e)
-                return
-        self.show_results(im, im_rf, im_fbi, im_err)
-                
-        self.start_button["state"] = "normal"
+    def show_results(self, f_in, rf_a, f_fbi, p, q):   
+        rf_b = np.zeros(rf_a.T.shape)
+        rf_b[0 : q + 1] = rf_a.T[q : 2 * q + 1]
+        rf_b[q + 1 : 2 * q + 1] = rf_a.T[0 : q]
         
-    def show_results(self, im, im_rf, im_fbi, im_err):
-        result_win = tk.Tk()
-        l_im = tk.Label(result_win, image = im)
-        l_im.grid(row = 0, column = 1)
-        l_imt = tk.Label(result_win, text="Original (b/w)")
-        l_imt.grid(row = 0, column = 1)
-        result_win.mainloop()
+        fig = plt.figure()
+        ax = fig.add_subplot(2, 2, 1)
+        imgplot1 = plt.imshow(f_in)
+        ax.set_title('Original')
+        #plt.colorbar(orientation='horizontal')
+        ax = fig.add_subplot(2, 2, 2)
+        plt.imshow(rf_b)
+        ax.set_title('Radon Transform')
+        #plt.colorbar(orientation='horizontal')
+        ax = fig.add_subplot(2, 2, 3)
+        plt.imshow(f_fbi)
+        ax.set_title('Filtered Backprojection')
+        #plt.colorbar(orientation='horizontal')
+        ax = fig.add_subplot(2, 2, 4)
+        plt.imshow(np.abs(f_fbi - f_in))
+        ax.set_title('Absolute Error')
+        #plt.colorbar(orientation='horizontal')
+        fig.suptitle("CT: FBI with p=%s, q=%s" % (p,q))
+        fig.subplots_adjust(right=0.8)
+        cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+        fig.colorbar(imgplot1, cax=cbar_ax)
+        fig.show()
 GUI()
