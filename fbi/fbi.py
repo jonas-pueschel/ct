@@ -4,10 +4,8 @@ Created on Mon Aug 16 13:44:14 2021
 
 @author: Jonas
 """
-
-import numpy as np
 import sys
-from PIL import Image
+import numpy as np
 
 # update_progress() : Displays or updates a console progress bar
 ## Accepts a float between 0 and 1. Any int will be converted to a float.
@@ -34,7 +32,7 @@ def update_progress(progress, prefix="Progress"):
 """
 """
 class RadonTransform:
-    def __init__(self, img_path):
+    def __init__(self, f_in):
         """
         Parameters
         ----------
@@ -42,10 +40,10 @@ class RadonTransform:
             image path.
         """
         
-        self.pix =np.array(Image.open(img_path).convert('L') )
+        self.pix = f_in
         self.x, self.y = self.pix.shape[0:2]
         self.r = np.sqrt(self.x*self.x+self.y*self.y)/2
-        self.messungen = np.reshape(np.zeros(self.x * self.y), (self.x, self.y))
+        #self.messungen = np.reshape(np.zeros(self.x * self.y), (self.x, self.y))
 
     
     def __call__(self, theta, sigma):
@@ -59,7 +57,7 @@ class RadonTransform:
             y += dy
             while x >= 0 and x < self.x and y >= 0 and y < self.y:
                 ret += self.pix[int(x), int(y)]
-                self.messungen[int(x), int(y)] = 255
+                #self.messungen[int(x), int(y)] = 255
                 x += dx
                 y += dy
             return ret
@@ -88,18 +86,16 @@ class RadonTransform:
         if x >= 0 and x <= self.x and y >= 0 and y <= self.y:
             if x != self.x and y != self.y:
                 ret += self.pix[int(x), int(y)]
-                self.messungen[int(x), int(y)] = 255
+                #self.messungen[int(x), int(y)] = 255
             ret += half_axis(x,y,dx,dy,ret)
             ret += half_axis(x, y, -dx, -dy,ret)        
         
         return ret/self.r
     
-def filteredBackprojection(img_in, img_out, radon_out = None, 
-                           q =10, p = None):
-    if p == None:
-        p = int(np.pi * q)
-    rf = RadonTransform(img_in)
-    
+def filteredBackprojection(f_in, p, q):
+    rf = RadonTransform(f_in)
+    n = f_in.shape[0]
+    m = f_in.shape[1]
     #sampling
     rf_a = np.reshape(np.zeros(p*(2*q+1)), (p,(2*q+1)))
     h = 1/q
@@ -121,11 +117,11 @@ def filteredBackprojection(img_in, img_out, radon_out = None,
             v[j,k] = sum(ar) 
             #print(v[j,k])
     
-    for xn in range(rf.x):
+    for xn in range(n):
         x = (xn-rf.x / 2 + 0.5)/rf.r
-        update_progress(xn/(rf.x-1), prefix = "Reconstructing")
-        for yn in range(rf.y):
-            y = (yn - rf.y / 2 + 0.5)/rf.r
+        update_progress(xn/(n-1), prefix = "Reconstructing")
+        for ym in range(m):
+            y = (ym - rf.y / 2 + 0.5)/rf.r
             sm = 0
             for j in range(p):
                 frac = (theta[j,0] * x + theta[j,1] * y)*q
@@ -134,27 +130,26 @@ def filteredBackprojection(img_in, img_out, radon_out = None,
                     k -= 1
                 t = frac - k
                 sm += (1-t)* v[j,k] + t * v[j,k+1]
-            fbi[xn,yn] =  sm
+            fbi[xn,ym] =  sm
             
     factor1 = q/(np.pi * np.pi) * 2 * np.pi /p
     fbi *= factor1
-    mx = np.amax(fbi)
-    print(mx)
-    fbi_pic = np.array(fbi)
-    for i in range (rf.x):
-        for j in range (rf.y):
-            if fbi_pic[i,j] < 0:
-                fbi_pic[i,j] = 0
-            elif fbi_pic[i,j] > 255:
-                fbi_pic[i,j] = 255
-    im = Image.fromarray(fbi_pic.astype(np.uint8))
-    im.save(img_out)
-    im2 = Image.fromarray(rf.messungen.astype(np.uint8))
-    im2.save("messungen.png")
+    return fbi, rf_a
+    #im2 = Image.fromarray(rf.messungen.astype(np.uint8))
+    #im2.save("messungen.png")
     
     
 if __name__ == "__main__":
-    filteredBackprojection("indexmod.png", "im.png")
+    try:
+        import numpy as np
+        import sys
+        from PIL import Image
+        for q in [30]:
+            out = "im"+ str(q) + ".png"
+            filteredBackprojection("indexmod.png", out, q = q)
+    except Exception as e:
+        print(e)
+    input("press Enter to exit...")
     #rf = RadonTransform("grey.png")
     #print(rf(np.array([np.sin(np.pi/8),np.cos(np.pi/8)]),0.77))
     
