@@ -29,8 +29,8 @@ def update_progress(progress, prefix="Progress"):
     text = "\r"+prefix+": [{0}] {1}% {2}".format( "#"*block + "-"*(barLength-block), progress*100, status)
     sys.stdout.write(text)
     sys.stdout.flush()
-"""
-"""
+
+
 class RadonTransform:
     def __init__(self, f_in):
         """
@@ -97,7 +97,7 @@ def filteredBackprojection(f_in, p, q):
     n = f_in.shape[0]
     m = f_in.shape[1]
     #sampling
-    rf_a = np.reshape(np.zeros(p*(2*q+1)), (p,(2*q+1)))
+    rf_a = np.zeros((p,(2*q+1)))
     h = 1/q
     theta = np.array([[np.cos(phi),np.sin(phi)] for phi in np.linspace(0, np.pi,num = p, endpoint = False)])
     for j in range(p):
@@ -115,7 +115,6 @@ def filteredBackprojection(f_in, p, q):
         for k in range(-q, q+1):
             ar = [(1/(1 - (4 * (k-l) * (k-l)))) * rf_a[j,l] for l in range(-q,q+1)]
             v[j,k] = sum(ar) 
-            #print(v[j,k])
     
     for xn in range(n):
         x = (xn-rf.x / 2 + 0.5)/rf.r
@@ -135,21 +134,4 @@ def filteredBackprojection(f_in, p, q):
     factor1 = q/(np.pi * np.pi) * 2 * np.pi /p
     fbi *= factor1
     return fbi, rf_a
-    #im2 = Image.fromarray(rf.messungen.astype(np.uint8))
-    #im2.save("messungen.png")
-    
-    
-if __name__ == "__main__":
-    try:
-        import numpy as np
-        import sys
-        from PIL import Image
-        for q in [30]:
-            out = "im"+ str(q) + ".png"
-            filteredBackprojection("indexmod.png", out, q = q)
-    except Exception as e:
-        print(e)
-    input("press Enter to exit...")
-    #rf = RadonTransform("grey.png")
-    #print(rf(np.array([np.sin(np.pi/8),np.cos(np.pi/8)]),0.77))
     
