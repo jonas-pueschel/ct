@@ -75,18 +75,18 @@ class GUI(tk.Tk):
         self.config(width = 400, height = 400)
         self.resizable(width=False, height=False)
         
-        tk.Button(self, text = "Start CT", command = self.start).place(x = 100, y = 360, width = 80, height = 25)
-        tk.Button(self, text = "Chart Errors", command = self.generate_error_charts).place(x = 220, y = 360, width = 80, height = 25)
-        
-        
+        tk.Button(self, text = "Show CT", command = lambda: self.start(show = True, chart = False)).place(x = 60, y = 360, width = 80, height = 25)
+        tk.Button(self, text = "Show errors", command = lambda: self.start(show = False, chart = True)).place(x = 160, y = 360, width = 80, height = 25)
+        tk.Button(self, text = "Show both", command = lambda: self.start(show = True, chart = True)).place(x = 260, y = 360, width = 80, height = 25)
         
         tk.Label(self,text="Input q:").place(x = 50, y = 300, width = 100, height = 15)
         self.input_q = tk.Entry(self)
         self.input_q.insert(10,"20")
         self.input_q.place(x = 150, y = 300, width = 150, height = 15)
        
-        tk.Label(self,text="Input p (optional):").place(x = 50, y = 320, width = 100, height = 15)
+        tk.Label(self,text="Input p:").place(x = 50, y = 320, width = 100, height = 15)
         self.input_p = tk.Entry(self)
+        self.input_p.insert(10, "optimal")
         self.input_p.place(x = 150, y = 320, width = 150, height = 15)
         
         self.im_label = None
@@ -94,9 +94,9 @@ class GUI(tk.Tk):
         self.im_desc.place(x = 0, y = 230, width = 400, height = 15)
         self.show_preset()
         
-        tk.Button(self, text = "add image", command = self.select_file).place(x = 170 ,y = 250,width = 60, height = 20)
-        tk.Button(self, text = "next", command = self.next_p).place(x = 240 ,y = 250,width = 60, height = 20)
-        tk.Button(self, text = "prev", command = self.prev_p).place(x = 100 ,y = 250,width = 60, height = 20)   
+        tk.Button(self, text = "add image", command = self.select_file).place(x = 160 ,y = 250,width = 80, height = 20)
+        tk.Button(self, text = "next", command = self.next_p).place(x = 250 ,y = 250,width = 60, height = 20)
+        tk.Button(self, text = "prev", command = self.prev_p).place(x = 90 ,y = 250,width = 60, height = 20)   
         
     def select_file(self):
         file = tkinter.filedialog.askopenfilename(parent=self, initialdir="/", title='Please select a picture')
@@ -125,47 +125,79 @@ class GUI(tk.Tk):
         self.show_preset()
     
     def get_vals(self):
-        qs = []
-        ps = []
 
-        for q in self.input_q.get().split(","):
-            try:
-                i = int(q)
-                qs += [i]
-            except Exception:
-                return [],[]
+        def get_val(st):
+            if len(st) == 0:
+                return []
+            if ":" in st:
+                spl = st.split(",")
+                st1 = spl[0]
+                try:
+                    spl2 = st1.split(":")
+                    if len(spl) == 1:
+                        step = 1
+                    elif len(spl) == 2:
+                        step = int(spl[1])
+                    else:
+                        return []
+                    return range(int(spl2[0]), int(spl2[1])+1, step)
+                except Exception as e:
+                    print(e)
+                    return []
+            else:
+                ar = []
+                for s in st.split(","):
+                    try:
+                        i = int(s)
+                        ar += [i]
+                    except Exception as e:
+                        print(e)
+                        return []
+                return ar
         
-        for p in self.input_p.get().split(","):
-            if p == "":
-                continue
-            try:
-                i = int(p)
-                ps += [i]
-            except Exception:
-                return [],[]
-        if len(ps) == 0:
+        qs = sorted(get_val(self.input_q.get()))
+        inp = self.input_p.get()
+        ps = []
+        if  inp.strip() == "optimal":
             for j in range(len(qs)):
                 ps += [int(np.pi * qs[j])]
-        elif len(qs) < len(ps):
-            while len(qs) < len(ps):
-                qs += qs
-            qs = qs[0:len(ps)]
-        else:
-            while len(qs) > len(ps):
-                ps += ps
-            ps = ps[0:len(qs)]
+        elif inp.strip()[0:5] == "const":
+            cs = inp.split("const")[1].strip()
+            if cs == "":
+                cc = qs[int(len(qs)/2)]**2 * np.pi
+            else:
+                try:
+                    cc = 1.03 * (qs[int(len(qs)/2)])**2 * float(cs)
+                except Exception:
+                    print("Error: invalid input for p ('const' must only be followed with an optional number)")
+                    return [],[]
+            for q in qs:
+                ps += [int(cc/(q))]
+        else:           
+            ps = get_val(inp)
+            if len(ps) == 0:
+                for j in range(len(qs)):
+                    ps += [int(np.pi * qs[j])]
+            elif len(qs) < len(ps):
+                while len(qs) < len(ps):
+                    qs += qs
+                qs = qs[0:len(ps)]
+            else:
+                while len(qs) > len(ps):
+                    ps += ps
+                ps = ps[0:len(qs)]
+        if(min(ps) <= 0 or min(qs) <= 0):
+            print("Error: invalid input: p and q may not be <= 0")
+            return [],[]
         return ps,qs
     
-    def generate_error_charts(self):
-        self.start(show = False, chart = True)
     
-    def start(self, show = True, chart = False):
+    def start(self, show = True, chart = True):
         while self.index == -1:
             self.select_file()
         ps, qs = self.get_vals()
         if len(qs) == 0:
-            return
-
+            print("Error: Invalid Input for p,q")
         f_in = [None for i in qs]
         f_fbi = [None for i in qs]
         rf_a = [None for i in qs]
@@ -176,7 +208,7 @@ class GUI(tk.Tk):
             f_in[i] = np.array(im)
             print("Calculating fbi with p={}, q = {}".format(p,q))
             print("img: " + self.pic_p_arr[self.index])
-            f_fbi[i], rf_a[i] = fbi.fbi.filteredBackprojection(f_in[i], p, q)
+            f_fbi[i], rf_a[i] = fbi.filteredBackprojection(f_in[i], p, q)
         if show:
             for i in range(len(f_in)):
                 self.show_results(f_in[i], rf_a[i], f_fbi[i], ps[i], qs[i])
@@ -185,14 +217,28 @@ class GUI(tk.Tk):
             max_err = [None for i in qs]
             avg_err =  [None for i in qs]
             
-            for i in range(len(rf_err)):
-                f_err = np.abs(f_in - f_fbi)
+            for i in range(len(max_err)):
+                f_err = np.abs(f_in[i] - f_fbi[i])
                 avg_err[i] = np.sum(f_err) / (f_err.shape[0] * f_err.shape[1])
                 max_err[i] = np.amax(f_err)
             self.show_plots(ps, qs, avg_err, max_err)
 
         
     def show_plots(self, ps, qs, avg_err, max_err):
+        #pq = [str((ps[i], qs[i])) for i in range(len(ps))]
+        plt.subplot(121)
+        plt.plot(qs, avg_err, 'go')
+        plt.xlabel('q')
+        plt.ylabel('avg. error')
+        
+        plt.subplot(122)
+        plt.plot(qs, max_err, 'ro')
+        plt.xlabel('q')
+        plt.ylabel('max. error')
+        plt.suptitle("Error Analysis for the FBI-Alogrithm")
+        plt.tight_layout()
+        plt.show()
+        
         pass
     
     def show_results(self, f_in, rf_a, f_fbi, p, q):   

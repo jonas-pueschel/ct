@@ -4,31 +4,8 @@ Created on Mon Aug 16 13:44:14 2021
 
 @author: Jonas
 """
-import sys
 import numpy as np
-
-# update_progress() : Displays or updates a console progress bar
-## Accepts a float between 0 and 1. Any int will be converted to a float.
-## A value under 0 represents a 'halt'.
-## A value at 1 or bigger represents 100%
-def update_progress(progress, prefix="Progress"):
-    barLength = 10 # Modify this to change the length of the progress bar
-    status = ""
-    if isinstance(progress, int):
-        progress = float(progress)
-    if not isinstance(progress, float):
-        progress = 0
-        status = "error: progress var must be float\r\n"
-    if progress < 0:
-        progress = 0
-        status = "Halt...              \r\n"
-    if progress >= 1:
-        progress = 1
-        status = "Done...              \r\n"
-    block = int(round(barLength*progress))
-    text = "\r"+prefix+": [{0}] {1}% {2}".format( "#"*block + "-"*(barLength-block), progress*100, status)
-    sys.stdout.write(text)
-    sys.stdout.flush()
+import functions
 
 
 class RadonTransform:
@@ -51,7 +28,7 @@ class RadonTransform:
         sp =  np.array([self.x/2, self.y/2]) +  sigma * self.r *  theta
         dx,dy = theta[1],-theta[0]
         
-        def half_axis(x,y,dx,dy,ret):
+        def half_axis(x,y,dx,dy):
             ret = 0
             x += dx
             y += dy
@@ -87,8 +64,8 @@ class RadonTransform:
             if x != self.x and y != self.y:
                 ret += self.pix[int(x), int(y)]
                 #self.messungen[int(x), int(y)] = 255
-            ret += half_axis(x,y,dx,dy,ret)
-            ret += half_axis(x, y, -dx, -dy,ret)        
+            ret += half_axis(x,y, dx, dy)
+            ret += half_axis(x, y, -dx, dy)        
         
         return ret/self.r
     
@@ -101,7 +78,10 @@ def filteredBackprojection(f_in, p, q):
     h = 1/q
     theta = np.array([[np.cos(phi),np.sin(phi)] for phi in np.linspace(0, np.pi,num = p, endpoint = False)])
     for j in range(p):
-        update_progress(j/(p-1), prefix = "Sampling")
+        if p>1:
+            functions.update_progress(j/(p-1), prefix = "Sampling")
+        else:
+            functions.update_progress(1.0, prefix = "Sampling")
         for k in range(-q,q+1):
             sigma = k * h
             rf_a[j,k] = rf(theta[j],sigma)
@@ -111,14 +91,17 @@ def filteredBackprojection(f_in, p, q):
     v = np.reshape(np.zeros(p*(2*q+1)), (p,(2*q+1)))
 
     for j in range(p):
-        update_progress(j/(p-1), prefix = "Calculating v_j,k")
+        if p>1:
+            functions.update_progress(j/(p-1), prefix = "Calculating v_j,k")
+        else:
+            functions.update_progress(1.0, prefix = "Calculating v_j,k")
         for k in range(-q, q+1):
             ar = [(1/(1 - (4 * (k-l) * (k-l)))) * rf_a[j,l] for l in range(-q,q+1)]
             v[j,k] = sum(ar) 
     
     for xn in range(n):
         x = (xn-rf.x / 2 + 0.5)/rf.r
-        update_progress(xn/(n-1), prefix = "Reconstructing")
+        functions.update_progress(xn/(n-1), prefix = "Reconstructing")
         for ym in range(m):
             y = (ym - rf.y / 2 + 0.5)/rf.r
             sm = 0

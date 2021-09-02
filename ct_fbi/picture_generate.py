@@ -48,5 +48,5 @@ def generate_wave(n = 500, k = 0, j = 0, out = "wave.png", norm = 2, vanish = 0.
     im.save(out)
     
 if __name__ == "__main__":
-    generate_wave(k = 8,j = 0, vanish = 0.6, norm = 2, white_center = True, out = "van_wave.png", smooth = False)
+    generate_wave(k = 79,j = 66, vanish = 0.579, norm = 3, white_center = False, out = "van_wave.png", smooth = True)
     
