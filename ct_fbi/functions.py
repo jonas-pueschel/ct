@@ -41,5 +41,10 @@ def get_radius(f_in):
         for j in range(mj):
             if f_in[i,j] != 0:
                 if (i -mj/2 + 0.5)**2 + (i -mj/2 + 0.5)**2 > r:
-                    r = (i -mj/2 + 0.5)**2
+                    r = (i - mj/2 + 0.5)**2           
     return np.sqrt(r)
+
+def draw_circle(im_in, r):
+    pass
+
+
