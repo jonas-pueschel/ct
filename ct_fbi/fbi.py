@@ -19,15 +19,17 @@ class RadonTransform:
         
         self.pix = f_in
         self.x, self.y = self.pix.shape[0:2]
-        self.r = np.sqrt(self.x*self.x+self.y*self.y)/2
+        self.r = np.sqrt(functions.get_radius(f_in)) + 1
+        self.med = np.array([self.x/2, self.y/2])
+        #self.med = np.array([self.x/2 - 0.5, self.y/2 - 0.5])
         #self.messungen = np.reshape(np.zeros(self.x * self.y), (self.x, self.y))
 
     
     def __call__(self, theta, sigma):
         ret = 0
-        sp =  np.array([self.x/2, self.y/2]) +  sigma * self.r *  theta
-        dx,dy = theta[1],-theta[0]
+        sp =  self.med +  sigma * self.r *  theta
         
+        dx,dy = theta[1],-theta[0]
         def half_axis(x,y,dx,dy):
             ret = 0
             x += dx
@@ -37,6 +39,7 @@ class RadonTransform:
                 #self.messungen[int(x), int(y)] = 255
                 x += dx
                 y += dy
+                
             return ret
     
         def get_vf(x,dx):
@@ -65,45 +68,49 @@ class RadonTransform:
                 ret += self.pix[int(x), int(y)]
                 #self.messungen[int(x), int(y)] = 255
             ret += half_axis(x,y, dx, dy)
-            ret += half_axis(x, y, -dx, dy)        
+            ret += half_axis(x, y, -dx, -dy)
         
         return ret/self.r
     
-def filteredBackprojection(f_in, p, q):
+def filteredBackprojection(f_in, p, q, step = 1):
     rf = RadonTransform(f_in)
-    n = f_in.shape[0]
-    m = f_in.shape[1]
     #sampling
     rf_a = np.zeros((p,(2*q+1)))
     h = 1/q
     theta = np.array([[np.cos(phi),np.sin(phi)] for phi in np.linspace(0, np.pi,num = p, endpoint = False)])
     for j in range(p):
-        if p>1:
-            functions.update_progress(j/(p-1), prefix = "Sampling")
-        else:
-            functions.update_progress(1.0, prefix = "Sampling")
+        functions.update_progress((j+1)/p, prefix = "Sampling")
         for k in range(-q,q+1):
             sigma = k * h
-            rf_a[j,k] = rf(theta[j],sigma)
-
+            rf_a[j,k] = rf(step * theta[j],sigma)
+    rf_a *= step
+    
     #fbi
-    fbi = np.reshape(np.zeros(rf.x * rf.y), (rf.x, rf.y))
-    v = np.reshape(np.zeros(p*(2*q+1)), (p,(2*q+1)))
+    fbi = np.zeros((rf.x, rf.y))
+    v = np.zeros((p,(2*q+1)))
 
     for j in range(p):
-        if p>1:
-            functions.update_progress(j/(p-1), prefix = "Calculating v_j,k")
-        else:
-            functions.update_progress(1.0, prefix = "Calculating v_j,k")
+        functions.update_progress((j+1)/p, prefix = "Calculating v_j,k")
         for k in range(-q, q+1):
             ar = [(1/(1 - (4 * (k-l) * (k-l)))) * rf_a[j,l] for l in range(-q,q+1)]
             v[j,k] = sum(ar) 
     
-    for xn in range(n):
-        x = (xn-rf.x / 2 + 0.5)/rf.r
-        functions.update_progress(xn/(n-1), prefix = "Reconstructing")
-        for ym in range(m):
-            y = (ym - rf.y / 2 + 0.5)/rf.r
+    r_inv = 1/rf.r
+    lwr = max(int(rf.x/2 + 0.5 - rf.r),0)
+    upr = min(int(np.ceil(rf.y/2 + 0.5 + rf.r)), rf.x)
+    for xn in range(lwr, upr):
+        x = (xn-rf.x / 2 + 0.5)
+        functions.update_progress((xn+1-lwr)/(upr-lwr), prefix = "Reconstructing")
+        border = np.sqrt(max(rf.r**2 - x**2,0)) #(max_y/2 + 0.5)
+        lower = max(int(rf.y/2 + 0.5 - border),0)
+        upper = min(int(np.ceil(rf.y/2 + 0.5 + border)), rf.y)
+        x *= r_inv
+        for ym in range(lower,upper):
+            y = (ym - rf.y / 2 + 0.5)*r_inv
+            pnt = np.array([x,y])
+            if np.linalg.norm(pnt)>= rf.r:
+                fbi[xn,ym] = 0
+                continue
             sm = 0
             for j in range(p):
                 frac = (theta[j,0] * x + theta[j,1] * y)*q

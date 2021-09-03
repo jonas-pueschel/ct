@@ -34,17 +34,32 @@ def update_progress(progress, prefix="Progress"):
 
 
 def get_radius(f_in):
-    r = 0
+    r2 = 0
     mi = f_in.shape[0]
     mj = f_in.shape[1]
     for i in range(mi):
         for j in range(mj):
             if f_in[i,j] != 0:
-                if (i -mj/2 + 0.5)**2 + (i -mj/2 + 0.5)**2 > r:
-                    r = (i - mj/2 + 0.5)**2           
-    return np.sqrt(r)
+                rnew = (i - mi/2 + 0.5)**2 + (j -mj/2 + 0.5)**2
+                if  rnew > r2:
+                    r2 = rnew         
+    return r2
 
-def draw_circle(im_in, r):
-    pass
+def draw_circle(f_in, r2):
+    xr,y = f_in.shape[0:2]
+    r = np.sqrt(r2)
+    for xn in range(xr):
+        if xn < xr/2 - r or xn > xr/2 + r:
+            f_in[xn,:] = np.ones(y) * 240
+            continue
+        x = (xn-xr/2 + 0.5)
+        border = np.sqrt(max(r2 - x**2,0)) #(max_y/2 + 0.5)
+        lower = max(int(y/2 + 0.5 - border),0)
+        upper = min(int(np.ceil(y/2 + 0.5 + border)), y)
+        for ym in range(0,lower):
+            f_in[xn,ym] = 240
+        for ym in range(upper, y):
+            f_in[xn,ym] = 240
+            
 
 
