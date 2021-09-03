@@ -90,7 +90,7 @@ class GUI(tk.Tk):
        
         tk.Label(self,text="Input p:").place(x = 50, y = 300, width = 100, height = 15)
         self.input_p = tk.Entry(self)
-        self.input_p.insert(10, "optimal")
+        self.input_p.insert(10, "factor 2.0")
         self.input_p.place(x = 150, y = 300, width = 150, height = 15)
         
         tk.Label(self,text="Parameters:").place(x = 50, y = 320, width = 100, height = 15)
@@ -112,19 +112,17 @@ class GUI(tk.Tk):
         try:
             #test if it can be opened:
             im = Image.open(file).convert('L') 
-            #SAVE FILE, MAY BE DEACTIVATED!
-            if(True):
-                try:
-                    file_end = file.split("/")[-1].split("\\")[-1]
-                    file = self.preset_dir + "/" + file_end
-                    im.save(file)
-                    self.pic_p_arr += [file]
-                    self.index = len(self.pic_p_arr) - 1
-                except Exception as e:
-                    print("Error when trying to save image in presets; CT can still be run.")
-                    print(e)
-            self.show_preset(im = im)
-            print("File loaded")
+            try:
+                file_end = file.split("/")[-1].split("\\")[-1]
+                file = self.preset_dir + "/" + file_end
+                im.save(file)
+                self.pic_p_arr += [file]
+                self.index = len(self.pic_p_arr) - 1
+                self.show_preset(im = im)
+                print("File loaded")
+            except Exception as e:
+                print("Error: When trying to save image in presets, an Error occured.")
+                print(e)
         except Exception:
             print("Couldn't load image: invalid file")
             return
@@ -168,19 +166,28 @@ class GUI(tk.Tk):
                         return []
                 return ar
         
-        qs = sorted(get_val(self.input_q.get()))
+        qs = get_val(self.input_q.get())
         inp = self.input_p.get()
         ps = []
-        if  inp.strip() == "optimal":
+        if  inp.strip().lower()[0:6] == "factor":
+            fctr = inp.split("factor")[1]
+            if fctr.strip() == "":
+                fctr = np.pi
+            else:
+                try:
+                    fctr = float(fctr)
+                except Exception:
+                    print("Error: invalid input for p ('factor' must only be followed with an optional number)")
+                    return [],[]
             for j in range(len(qs)):
-                ps += [int(np.pi * qs[j])]
+                ps += [int(fctr * qs[j])]
         elif inp.strip()[0:5] == "const":
             cs = inp.split("const")[1].strip()
             if cs == "":
                 cc = qs[int(len(qs)/2)]**const_pot * np.pi
             else:
                 try:
-                    cc = 1.03 * (qs[int(len(qs)/2)])**3 * float(cs)
+                    cc = (qs[int(len(qs)/2)])**const_pot * float(cs)
                 except Exception:
                     print("Error: invalid input for p ('const' must only be followed with an optional number)")
                     return [],[]
@@ -234,37 +241,59 @@ class GUI(tk.Tk):
         return params
     
     def start(self, show = True, chart = True):
-        print("starting...")
+        print("starting... show = {}, chart = {}".format(show, chart))
+        print("img: " + self.pic_p_arr[self.index])
         while self.index == -1:
             self.select_file()
         params = self.get_params()
         ps, qs = self.get_vals(params["const"])
         if len(qs) == 0:
             print("Error: Invalid Input for p,q")
-        f_in = [None for i in qs]
+        im = Image.open(self.pic_p_arr[self.index]).convert('L')
+        f_in = np.array(im)
         f_fbi = [None for i in qs]
         rf_a = [None for i in qs]
-        for i in range(len(qs)):
-            q = qs[i]
-            p = ps[i]
-            im = Image.open(self.pic_p_arr[self.index]).convert('L')
-            f_in[i] = np.array(im)
-            print("Calculating fbi with p={}, q = {}".format(p,q))
-            print("img: " + self.pic_p_arr[self.index])
-            f_fbi[i], rf_a[i] = fbi.filteredBackprojection(f_in[i], p, q, step = params["step"])
-        if show:
-            for i in range(len(f_in)):
-                self.show_results(f_in[i], rf_a[i], f_fbi[i], ps[i], qs[i])
-                #save??
-        if chart:
+        img_name = self.pic_p_arr[self.index].split("/")[-1].split("\\")[-1].split(".")[0]
+        if (not show) and chart:
             max_err = [None for i in qs]
             avg_err =  [None for i in qs]
-            
+            data_dict = functions.import_data(img_name)
+            for i in range(len(qs)):
+                q = qs[i]
+                p = ps[i]
+                key = "{}/{}/{}".format(p,q,params["step"])
+                if key in data_dict.keys():
+                    avg_err[i] = data_dict[key][0]
+                    max_err[i] = data_dict[key][1]
+                    print("loaded errors for p={}, q = {} from file".format(p,q))
+                else:
+                    print("Calculating fbi with p={}, q = {}".format(p,q)) 
+                    f_fbi[i], rf_a[i] = fbi.filteredBackprojection(f_in, p, q, step = params["step"])
+                    f_err = np.abs(f_in - f_fbi[i])
+                    avg_err[i] = np.sum(f_err) / (f_err.shape[0] * f_err.shape[1])
+                    max_err[i] = np.amax(f_err)
+                    functions.add_data(img_name, ps[i], qs[i], avg_err[i], max_err[i], params["step"])
+            self.show_plots(ps, qs, avg_err, max_err, params["err_axis"], params["err_title"])
+        elif show:
+            for i in range(len(qs)):
+                q = qs[i]
+                p = ps[i]
+                
+                print("Calculating fbi with p={}, q = {}".format(p,q))
+                f_fbi[i], rf_a[i] = fbi.filteredBackprojection(f_in, p, q, step = params["step"])
+        
+            for i in range(len(qs)):
+                self.show_results(f_in, rf_a[i], f_fbi[i], ps[i], qs[i])
+                #TODO: save??
+            max_err = [None for i in qs]
+            avg_err =  [None for i in qs]
             for i in range(len(max_err)):
-                f_err = np.abs(f_in[i] - f_fbi[i])
+                f_err = np.abs(f_in - f_fbi[i])
                 avg_err[i] = np.sum(f_err) / (f_err.shape[0] * f_err.shape[1])
                 max_err[i] = np.amax(f_err)
-            self.show_plots(ps, qs, avg_err, max_err, params["err_axis"], params["err_title"])
+                functions.add_data(img_name, ps[i], qs[i], avg_err[i], max_err[i], params["step"])
+                if chart:
+                    self.show_plots(ps, qs, avg_err, max_err, params["err_axis"], params["err_title"])
 
         
     def show_plots(self, ps, qs, avg_err, max_err, err, err_add):
@@ -299,7 +328,7 @@ class GUI(tk.Tk):
         plt.plot(x_arr, max_err, 'ro')
         plt.xlabel(err)
         plt.ylabel('max. error')
-        plt.suptitle("Error Analysis for the FBI-Alogrithm")
+        plt.suptitle("Error Analysis for the FBI-Alogrithm " + err_add)
         if(err == "p,q" or err == "q,p"):
             plt.xticks(x_arr, labels, rotation='vertical')
             # Pad margins so that markers don't get clipped by the axes

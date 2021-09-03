@@ -6,7 +6,7 @@ Created on Wed Sep  1 21:14:11 2021
 """
 
 
-import sys
+import csv, sys, os
 import numpy as np
 
 # update_progress() : Displays or updates a console progress bar
@@ -45,6 +45,31 @@ def get_radius(f_in):
                     r2 = rnew         
     return r2
 
+def add_data(image_name, p, q, avg_err, max_err, step):
+    print("saving data...")
+    BASEPATH = os.path.abspath(os.path.dirname(__file__)).replace('\\','/') + "/result_save"
+    filename = BASEPATH + "/" + image_name + ".csv"
+    with open(filename, 'a') as file:
+        file.write("{};{};{};{};{}\n".format(p,q,avg_err, max_err, step))
+        
+def import_data(image_name):
+    BASEPATH = os.path.abspath(os.path.dirname(__file__)).replace('\\','/') + "/result_save"
+    filename = BASEPATH + "/" + image_name + ".csv"
+    try:
+        with open(filename, newline ='') as csvfile:
+            reader = csv.reader(csvfile, delimiter=';')
+            arr_in = list(reader)
+        result = dict()
+        for i in range(len(arr_in)):
+            key = arr_in[i][0] + "/" + arr_in[i][1] + "/" + arr_in[i][4]
+            if key not in result.keys():
+                result[key] = (float(arr_in[i][2]), float(arr_in[i][3])) 
+            else:
+                print("WARNING: duplicate "+image_name+"-entry '"+ arr_in[i][0] + "/" + arr_in[i][1]+ "'")
+        return result
+    except Exception:
+        return dict()
+
 def draw_circle(f_in, r2):
     xr,y = f_in.shape[0:2]
     r = np.sqrt(r2)
@@ -61,5 +86,3 @@ def draw_circle(f_in, r2):
         for ym in range(upper, y):
             f_in[xn,ym] = 240
             
-
-

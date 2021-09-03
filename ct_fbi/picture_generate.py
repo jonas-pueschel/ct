@@ -9,10 +9,14 @@ Created on Tue Aug 31 16:16:56 2021
 import numpy as np
 from PIL import Image
 
-def generate_wave(n = 500, k = 0, j = 0, out = "wave.png", norm = 2, vanish = 0.0, smooth = True, white_center = False):
+def generate_wave(n = 500, k = 0, j = 0, out = "wave.png", norm = 2, vanish = 0.0, force_r = True, smooth = True, white_center = False):
     ar = np.zeros((n, n))
+    r2 = (n/2)**2
     for x in range(n):
         for y in range(n):
+            if force_r and (x- n/2 + 0.5) ** 2 + (y-n/2 + 0.5)**2 > r2:
+                ar[x,y] = 0
+                continue
             if k != 0 or vanish != 0:
                 if norm == "inf" or norm == "infty" or norm == "infinity":
                     d = max(abs(x- n/2 + 0.5), abs(y-n/2 + 0.5))
@@ -48,5 +52,5 @@ def generate_wave(n = 500, k = 0, j = 0, out = "wave.png", norm = 2, vanish = 0.
     im.save(out)
     
 if __name__ == "__main__":
-    generate_wave(k = 79,j = 66, vanish = 0.579, norm = 3, white_center = False, out = "van_wave.png", smooth = True)
+    generate_wave(k = 1,j = 8, vanish = 0, norm = 2, white_center = False, out = "wave2.png", smooth = True)
     
