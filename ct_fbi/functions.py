@@ -8,6 +8,7 @@ Created on Wed Sep  1 21:14:11 2021
 
 import csv, sys, os
 import numpy as np
+from PIL import Image
 
 # update_progress() : Displays or updates a console progress bar
 ## Accepts a float between 0 and 1. Any int will be converted to a float.
@@ -40,7 +41,7 @@ def get_radius(f_in):
     for i in range(mi):
         for j in range(mj):
             if f_in[i,j] != 0:
-                rnew = (i - mi/2 + 0.5)**2 + (j -mj/2 + 0.5)**2
+                rnew = max(np.abs(i - mi/2),np.abs(i - mi/2 + 1))**2 + max(np.abs(j - mj/2),np.abs(j - mj/2 + 1))**2
                 if  rnew > r2:
                     r2 = rnew         
     return r2
@@ -70,19 +71,41 @@ def import_data(image_name):
     except Exception:
         return dict()
 
-def draw_circle(f_in, r2):
+def draw_circle(f_in, r2, val = 240):
     xr,y = f_in.shape[0:2]
     r = np.sqrt(r2)
     for xn in range(xr):
         if xn < xr/2 - r or xn > xr/2 + r:
-            f_in[xn,:] = np.ones(y) * 240
+            f_in[xn,:] = np.ones(y) * val
             continue
         x = (xn-xr/2 + 0.5)
         border = np.sqrt(max(r2 - x**2,0)) #(max_y/2 + 0.5)
         lower = max(int(y/2 + 0.5 - border),0)
         upper = min(int(np.ceil(y/2 + 0.5 + border)), y)
         for ym in range(0,lower):
-            f_in[xn,ym] = 240
+            f_in[xn,ym] = val
         for ym in range(upper, y):
-            f_in[xn,ym] = 240
+            f_in[xn,ym] = val
             
+def main():
+    with Image.open("presets/shepp_logan.png").convert('L')  as img:
+        f_in = np.array(img)
+        x,y = f_in.shape[0:2]
+        r_2 = np.sqrt(get_radius(f_in))
+        r_1 = (np.linalg.norm(np.array([x,y]) ,2) /2)
+        def draw_mod(r, pth):
+            d = max(2*r, 2*y, 2* x)
+            f_in_big = np.zeros((d,d))
+            r = int(r)
+            f_in_big[int(d/2-x/2):int(d/2-x/2)+x,int(d/2-y/2):int(d/2-y/2)+y] = f_in 
+            f_in_big = f_in_big[int(d/2)-r:int(d/2)+r,int(d/2)-r:int(d/2)+r]
+            draw_circle(f_in_big, r*r, val = 255)
+            Image.fromarray(f_in_big.astype(np.uint8)).save(pth)
+        draw_mod(r_1, "naive.png")
+        draw_mod(r_2, "improved.png")
+        
+
+        
+
+if __name__ == "__main__":
+    main()

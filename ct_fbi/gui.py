@@ -90,12 +90,12 @@ class GUI(tk.Tk):
        
         tk.Label(self,text="Input p:").place(x = 50, y = 300, width = 100, height = 15)
         self.input_p = tk.Entry(self)
-        self.input_p.insert(10, "factor 2.0")
+        self.input_p.insert(10, "factor")
         self.input_p.place(x = 150, y = 300, width = 150, height = 15)
         
         tk.Label(self,text="Parameters:").place(x = 50, y = 320, width = 100, height = 15)
         self.input_par = tk.Entry(self)
-        self.input_par.insert(10, "err_axis=q; step=1")
+        self.input_par.insert(10, "err_axis=q; step=0.5")
         self.input_par.place(x = 150, y = 320, width = 150, height = 15)
         
         self.im_label = None
@@ -212,7 +212,7 @@ class GUI(tk.Tk):
         return ps,qs
     
     def get_params(self):
-        params = {"err_axis":"q", "err_title":"", "step":1, "const":3}
+        params = {"err_axis":"q", "err_title":"", "step":0.5, "const":3}
         param_inp = self.input_par.get().split(";")
         for par in param_inp:
             par = par.strip()
@@ -229,7 +229,7 @@ class GUI(tk.Tk):
                         params["step"] = float(val)
                     
                 except Exception as e:
-                    print("Warning: invalid value for param 'step', defaulting to 1")
+                    print("Warning: invalid value for param 'step', defaulting to 0.5")
                     print(e)
             elif cmd.strip().lower() == "const":
                 if val.strip().lower() == "pq":
@@ -347,8 +347,8 @@ class GUI(tk.Tk):
         ax = fig.add_subplot(2, 2, 1)
         imgplot1 = plt.imshow(f_in, vmin = 0, vmax = 255)
         ax.set_title('Original')
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
+        #ax.set_xlabel("x")
+        #ax.set_ylabel("y")
         
         ax = fig.add_subplot(2, 2, 2)
         plt.imshow(rf_b, extent=[0, p, q, -q], cmap="hot")# vmin = 0, vmax = 255)
@@ -361,16 +361,17 @@ class GUI(tk.Tk):
         ax = fig.add_subplot(2, 2, 3)
         plt.imshow(f_fbi, vmin = 0, vmax = 255)
         ax.set_title('Filtered Backprojection')
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
+        #ax.set_xlabel("x")
+        #ax.set_ylabel("y")
 
         ax = fig.add_subplot(2, 2, 4)
         f_err = np.abs(f_fbi - f_in)
+        max_err = np.amax(f_err)
         avg_error = np.sum(f_err) / (f_err.shape[0] * f_err.shape[1])
         plt.imshow(f_err, vmin = 0, vmax = 255)
-        ax.set_title("Error (avg: {:0.3f})".format(avg_error))
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
+        ax.set_title("Error")
+        ax.set_xlabel("avg: {:0.3f}, max: {:0.1f}".format(avg_error, max_err))
+        #ax.set_ylabel("y")
 
         fig.suptitle("Computerized Tomography: FBI with p=%s, q=%s" % (p,q))
         plt.tight_layout()
