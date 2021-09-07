@@ -52,5 +52,5 @@ def generate_wave(n = 500, k = 0, j = 0, out = "wave.png", norm = 2, vanish = 0.
     im.save(out)
     
 if __name__ == "__main__":
-    generate_wave(k = 8,j = 8, vanish = 0, norm = 2, white_center = False, out = "wave3.png", smooth = True, force_r = True)
+    generate_wave(k = 4,j = 8, vanish = 0, norm = 2, white_center = False, out = "wave.png", smooth = True, force_r = True)
     

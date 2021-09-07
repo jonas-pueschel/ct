@@ -257,11 +257,14 @@ class GUI(tk.Tk):
         if (not show) and chart:
             max_err = [None for i in qs]
             avg_err =  [None for i in qs]
+            
             data_dict = functions.import_data(img_name)
+            print(data_dict.keys())
             for i in range(len(qs)):
                 q = qs[i]
                 p = ps[i]
                 key = "{}/{}/{}".format(p,q,params["step"])
+                print(key)
                 if key in data_dict.keys():
                     avg_err[i] = data_dict[key][0]
                     max_err[i] = data_dict[key][1]
@@ -328,7 +331,8 @@ class GUI(tk.Tk):
         plt.plot(x_arr, max_err, 'ro')
         plt.xlabel(err)
         plt.ylabel('max. error')
-        plt.suptitle("Error Analysis for the FBI-Alogrithm " + err_add)
+        im_name = self.pic_p_arr[self.index].split("/")[-1].split("\\")[-1]
+        plt.suptitle("Fitlered Backprojection Error Analysis for {} ".format(im_name) + err_add)
         if(err == "p,q" or err == "q,p"):
             plt.xticks(x_arr, labels, rotation='vertical')
             # Pad margins so that markers don't get clipped by the axes
@@ -373,7 +377,8 @@ class GUI(tk.Tk):
         ax.set_xlabel("avg: {:0.3f}, max: {:0.1f}".format(avg_error, max_err))
         #ax.set_ylabel("y")
 
-        fig.suptitle("Computerized Tomography: FBI with p=%s, q=%s" % (p,q))
+        im_name = self.pic_p_arr[self.index].split("/")[-1].split("\\")[-1]
+        fig.suptitle("Computerized Tomography: FBI with p={}, q={} for {}".format(p,q, im_name))
         plt.tight_layout()
         fig.subplots_adjust(right=0.8)
         

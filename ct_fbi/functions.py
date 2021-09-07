@@ -51,7 +51,7 @@ def add_data(image_name, p, q, avg_err, max_err, step):
     BASEPATH = os.path.abspath(os.path.dirname(__file__)).replace('\\','/') + "/result_save"
     filename = BASEPATH + "/" + image_name + ".csv"
     with open(filename, 'a') as file:
-        file.write("{};{};{};{};{}\n".format(p,q,avg_err, max_err, step))
+        file.write("{};{};{};{};{}\n".format(p,q,str(avg_err), str(max_err), str(step)))
         
 def import_data(image_name):
     BASEPATH = os.path.abspath(os.path.dirname(__file__)).replace('\\','/') + "/result_save"
@@ -64,11 +64,16 @@ def import_data(image_name):
         for i in range(len(arr_in)):
             key = arr_in[i][0] + "/" + arr_in[i][1] + "/" + arr_in[i][4]
             if key not in result.keys():
-                result[key] = (float(arr_in[i][2]), float(arr_in[i][3])) 
+                try:
+                    result[key] = (float(arr_in[i][2]), float(arr_in[i][3])) 
+                except Exception as e:
+                    print(e)
             else:
                 print("WARNING: duplicate "+image_name+"-entry '"+ arr_in[i][0] + "/" + arr_in[i][1]+ "'")
         return result
-    except Exception:
+    except Exception as e:
+        print("Error when loading past results...")
+        print(e)
         return dict()
 
 def draw_circle(f_in, r2, val = 240):
