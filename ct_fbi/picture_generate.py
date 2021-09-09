@@ -51,6 +51,25 @@ def generate_wave(n = 500, k = 0, j = 0, out = "wave.png", norm = 2, vanish = 0.
     im = Image.fromarray(ar.astype(np.uint8))
     im.save(out)
     
-if __name__ == "__main__":
-    generate_wave(k = 4,j = 8, vanish = 0, norm = 2, white_center = False, out = "wave.png", smooth = True, force_r = True)
+def generate_flat_wave(n = 500, k = 0, force_r = True, out = "wave.png"):
+    ar= np.zeros((n,n))
+    r = n/2
+    for x in range(n):
+        val = ((0.5 - 0.5 * np.cos(2*k*np.pi * x/n)) * 255)
+        xn2 = (x- n/2 + 0.5) ** 2
+        for y in range(n):
+            rad = np.sqrt(xn2 + (y-n/2 + 0.5)**2)
+            if force_r and rad > r:
+                continue
+            if rad > 0.9 * r:
+                vf = 10 * (r - rad)/r
+            else:
+                vf = 1
+            ar[x,y] = int(val * vf)
+    im = Image.fromarray(ar.astype(np.uint8))
+    im.save(out)
+            
     
+if __name__ == "__main__":
+    #generate_wave(k = 5.5,j = 0, vanish = 0, norm = 2, white_center = True, out = "wave.png", smooth = True, force_r = True)
+    generate_flat_wave(k=18)

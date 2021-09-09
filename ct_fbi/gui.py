@@ -259,12 +259,12 @@ class GUI(tk.Tk):
             avg_err =  [None for i in qs]
             
             data_dict = functions.import_data(img_name)
-            print(data_dict.keys())
+            #print(data_dict.keys())
             for i in range(len(qs)):
                 q = qs[i]
                 p = ps[i]
                 key = "{}/{}/{}".format(p,q,params["step"])
-                print(key)
+                #print(key)
                 if key in data_dict.keys():
                     avg_err[i] = data_dict[key][0]
                     max_err[i] = data_dict[key][1]
